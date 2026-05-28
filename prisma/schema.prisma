@@ -1,0 +1,181 @@
+// Berimbolo Security - Prisma Schema
+// PostgreSQL database schema for security management system
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Customer model - represents clients who own security devices and book appointments
+model Customer {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  phone        String
+  fullName     String
+  address      String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relationships
+  appointments Appointment[]
+  devices      IoTDevice[]
+  
+  @@index([email])
+  @@map("customers")
+}
+
+// Engineer model - technical staff who perform installations and maintenance
+model Engineer {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  phone        String
+  fullName     String
+  specialty    String?       // e.g., "CCTV", "Alarms", "Both"
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relationships
+  appointments Appointment[]
+  jobTickets   JobTicket[]
+  
+  @@index([email])
+  @@index([isActive])
+  @@map("engineers")
+}
+
+// Appointment model - scheduled visits for installation or maintenance
+model Appointment {
+  id           String        @id @default(uuid())
+  customerId   String
+  engineerId   String
+  scheduledAt  DateTime
+  duration     Int           // duration in minutes
+  status       AppointmentStatus @default(SCHEDULED)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relationships
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  engineer     Engineer      @relation(fields: [engineerId], references: [id])
+  jobTicket    JobTicket?
+  
+  @@index([customerId])
+  @@index([engineerId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("appointments")
+}
+
+// Enum for appointment status
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+// JobTicket model - work orders assigned to engineers
+model JobTicket {
+  id           String        @id @default(uuid())
+  appointmentId String       @unique
+  engineerId   String
+  status       JobTicketStatus @default(PENDING)
+  description  String
+  sparePartsRequested String[] // Array of part names/IDs requested
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relationships
+  appointment  Appointment   @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  engineer     Engineer      @relation(fields: [engineerId], references: [id])
+  telemetryLogs TelemetryLog[]
+  
+  @@index([engineerId])
+  @@index([status])
+  @@index([appointmentId])
+  @@map("job_tickets")
+}
+
+// Enum for job ticket status
+enum JobTicketStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+// IoTDevice model - represents CCTV cameras, alarm systems, etc.
+model IoTDevice {
+  id           String        @id @default(uuid())
+  customerId   String
+  deviceType   DeviceType
+  serialNumber String        @unique
+  modelName    String
+  ipAddress    String?
+  location     String?       // Physical location description
+  isActive     Boolean       @default(true)
+  installedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relationships
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  telemetryLogs TelemetryLog[]
+  
+  @@index([customerId])
+  @@index([serialNumber])
+  @@index([deviceType])
+  @@index([isActive])
+  @@map("iot_devices")
+}
+
+// Enum for device types
+enum DeviceType {
+  CCTV
+  ALARM
+  MOTION_SENSOR
+  DOOR_SENSOR
+  GLASS_BREAK_SENSOR
+  SIREN
+  CONTROL_PANEL
+}
+
+// TelemetryLog model - stores events from IoT devices
+model TelemetryLog {
+  id           String        @id @default(uuid())
+  deviceId     String
+  jobTicketId  String?
+  eventType    String        // e.g., "MOTION_DETECTED", "ALARM_TRIGGERED"
+  payload      Json          // Raw JSON data from device
+  severity     Severity      @default(INFO)
+  processed    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  
+  // Relationships
+  device       IoTDevice     @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  jobTicket    JobTicket?    @relation(fields: [jobTicketId], references: [id])
+  
+  @@index([deviceId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([createdAt])
+  @@index([processed])
+  @@map("telemetry_logs")
+}
+
+// Enum for telemetry severity levels
+enum Severity {
+  INFO
+  WARNING
+  CRITICAL
+  EMERGENCY
+}
