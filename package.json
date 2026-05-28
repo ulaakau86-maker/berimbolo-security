@@ -1,0 +1,37 @@
+{
+  "name": "berimbolo-security-api",
+  "version": "1.0.0",
+  "description": "Berimbolo Security - Backend API for security management system with appointments, job tickets, and IoT telemetry",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "db:seed": "node prisma/seed.js"
+  },
+  "keywords": [
+    "security",
+    "iot",
+    "cctv",
+    "alarm",
+    "appointments",
+    "prisma",
+    "postgresql",
+    "express"
+  ],
+  "author": "Berimbolo Security",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.0.0",
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
